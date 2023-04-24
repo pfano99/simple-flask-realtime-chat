@@ -1,0 +1,121 @@
+<html>
+<head>
+    <title>Flask-SocketIO-Chat: {{ room }}</title>
+    <script type="text/javascript" src="//code.jquery.com/jquery-1.4.2.min.js"></script>
+    <script type="text/javascript" src="//cdn.socket.io/4.4.1/socket.io.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+<script type="text/javascript" charset="utf-8">
+            var socket;
+            var _recipient = "{{ context.recipient }}"
+            $(document).ready(function(){
+                socket = io.connect('http://' + document.domain + ':' + location.port + '/chatx');
+                socket.on('connect', function() {
+                    socket.emit('joined', { msg:_recipient  });
+                });
+                socket.on('message', function(data) {
+                    var messageElement;
+
+                    if(parseInt(data.recipient) == parseInt(_recipient)){
+                        messageElement = sentMessageElement(data.msg);
+                    }else{
+                        messageElement = receivedMessageElement(data.msg);
+                    }
+                    const chatWindow = document.getElementById('chat-window');
+                    chatWindow.appendChild(messageElement);
+
+                });
+                $('#text').keypress(function(e) {
+                    var code = e.keyCode || e.which;
+                    if (code == 13) {
+                        text = $('#text').val();
+                        $('#text').val('');
+                        socket.emit('text', {msg: text, recipient:_recipient});
+                    }
+                });
+            });
+
+           function sentMessageElement(message) {
+                  const messageContainer = document.createElement('div');
+                  messageContainer.classList.add('flex', 'w-full', 'mt-2', 'space-x-3', 'max-w-xs', 'ml-auto', 'justify-end');
+
+                  const messageContent = document.createElement('div');
+                  messageContent.innerHTML = `
+                    <div class="bg-blue-600 text-white p-3 rounded-l-lg rounded-br-lg">
+                      <p class="text-sm">${message}</p>
+                    </div>
+                    <span class="text-xs text-gray-500 leading-none">${message.date_sent}</span>
+                  `;
+
+                  const avatarContainer = document.createElement('div');
+                  avatarContainer.classList.add('flex-shrink-0', 'h-10', 'w-10', 'rounded-full', 'bg-gray-300');
+
+                  messageContainer.appendChild(messageContent);
+                  messageContainer.appendChild(avatarContainer);
+
+                  return messageContainer;
+            }
+
+            function receivedMessageElement(message) {
+              const messageContainer = document.createElement('div');
+              messageContainer.classList.add('flex', 'w-full', 'mt-2', 'space-x-3', 'max-w-xs');
+
+              const avatarContainer = document.createElement('div');
+              avatarContainer.classList.add('flex-shrink-0', 'h-10', 'w-10', 'rounded-full', 'bg-gray-300');
+
+              const messageContent = document.createElement('div');
+              messageContent.innerHTML = `
+                <div class="bg-gray-300 p-3 rounded-r-lg rounded-bl-lg">
+                  <p class="text-sm">${message}</p>
+                </div>
+                <span class="text-xs text-gray-500 leading-none">${message.date_sent}</span>
+              `;
+
+              messageContainer.appendChild(avatarContainer);
+              messageContainer.appendChild(messageContent);
+
+              return messageContainer;
+            }
+
+
+
+</script>
+
+<div class="flex flex-col items-center justify-center w-screen min-h-screen bg-gray-100 text-gray-800 p-10">
+    <div class="flex flex-col flex-grow w-full max-w-xl bg-white shadow-xl rounded-lg overflow-hidden">
+        <div class="flex flex-col flex-grow h-0 p-4 overflow-auto" id="chat-window">
+            {% for message in context.messages %}
+            {% if message.sender_id != current_user.id %}
+            <div class="flex w-full mt-2 space-x-3 max-w-xs">
+                <div class="flex-shrink-0 h-10 w-10 rounded-full bg-gray-300"></div>
+                <div>
+                    <div class="bg-gray-300 p-3 rounded-r-lg rounded-bl-lg">
+                        <p class="text-sm">{{ message.body }}</p>
+                    </div>
+                    <span class="text-xs text-gray-500 leading-none">{{ message.date_sent.strftime("%m %B %Y, %H:%M") }}</span>
+                </div>
+            </div>
+            {% else %}
+            <div class="flex w-full mt-2 space-x-3 max-w-xs ml-auto justify-end">
+                <div>
+                    <div class="bg-blue-600 text-white p-3 rounded-l-lg rounded-br-lg">
+                        <p class="text-sm">{{ message.body }}</p>
+                    </div>
+                    <span class="text-xs text-gray-500 leading-none">{{ message.date_sent.strftime("%m %B %Y, %H:%M") }}</span>
+                </div>
+                <div class="flex-shrink-0 h-10 w-10 rounded-full bg-gray-300"></div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+
+        <div class="bg-gray-300 p-4">
+            <input class="flex items-center h-10 w-full rounded px-3 text-sm" type="text" id="text"
+                   placeholder="Type your message…">
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
